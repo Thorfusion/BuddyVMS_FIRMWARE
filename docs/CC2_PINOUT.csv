@@ -1,0 +1,40 @@
+pin,direction,function,active_level,confidence,notes
+P0.3,output,direction relay,high assumed,high pin medium polarity,original output driver and meter mapping
+P0.4,output,footswitch relay,high assumed,high pin medium polarity,original output driver and meter mapping
+P0.5,input,trip button,raw,high,read by original input sampler
+P0.6,output,dashboard pin 16/bank select,bank dependent,high,return high after bank transaction
+P0.7,output,dashboard pin 15/bank select,bank dependent,high,return high after bank transaction
+P1.0,input,UART RX,UART,high,page-2 UART route
+P1.1,output,UART TX,UART,high,page-2 UART route
+P1.2,output,AT25128A SCK,SPI,high,XC878 SSC SCK_0
+P1.3,output,AT25128A MOSI/SI,SPI,high,XC878 SSC MTSR_0
+P1.4,input,AT25128A MISO/SO,SPI,high,XC878 SSC MRST_0
+P1.5,output,AT25128A chip select,low,high,software chip select
+P1.7,output,DC/DC force,high assumed,high pin medium semantics,meter-confirmed role
+P3.0,output,ADC/activity LED,low,high,independent LED
+P3.1,output,UART transmit LED,low,high,independent LED not UART TX
+P3.4,output,charge-enable relay,low,high,proven active-low
+P3.5,output,Q6 motor-relay enable,high assumed,high pin medium polarity,original output driver and meter mapping
+P3.6,output,full-charge/Ah relay,high assumed,high pin medium polarity,original charger driver and meter mapping
+P3.7,output,fan relay,high assumed,high pin medium polarity,original fan driver and meter mapping
+P4.0,input,charger-connected detect,raw,high,original input sampler
+P4.1,input,speed pulse,falling edge,high,EXINT4-capable
+P4.2,output,buzzer,high,high,original output driver
+P4.4,input,ignition detect,raw,high,original input sampler
+P4.5,output,ADG408 A2,mux select,high,part of P4.7:5 pattern
+P4.6,output,ADG408 A1,mux select,high,part of P4.7:5 pattern
+P4.7,output,ADG408 A0,mux select,high,part of P4.7:5 pattern
+P5.0,input,direction input,raw,high,use P5_DATA mask 0x01
+P5.2,output,standby/DC-DC auxiliary,unknown,high pin low role,starter leaves original idle level
+P5.3,input,tied ground,none,high,never drive
+P5.5,bidirectional,display I2C SCL,open drain,high,use P5 byte masks
+P5.7,bidirectional,display I2C SDA,open drain,high,use P5 byte masks
+AN0,input,ADG408 voltage mux common,analog,high,through external divider/conditioning
+AN1,input,shunt path A,analog,high pin unknown gain,calibration required
+AN2,input,shunt path B,analog,high pin unknown gain,calibration required
+AN3,input,dashboard light level,analog,high,4 mV per ADC count at MCU pin
+AN4,input,box NTC,analog,high,sensor curve required
+AN5,input,front temperature,analog,high,sensor transfer function required
+AN6,input,rear temperature,analog,high,sensor transfer function required
+AN7,input,spare NTC,analog,high,unused on at least one vehicle variant
+unknown,input,72 V optocoupler/pedal/motor-relay feedback,unknown,open,must be continuity-traced
