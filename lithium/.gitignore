@@ -1,0 +1,5 @@
+firmware/build/
+firmware/build_safe/
+firmware/build_test/
+__pycache__/
+*.pyc

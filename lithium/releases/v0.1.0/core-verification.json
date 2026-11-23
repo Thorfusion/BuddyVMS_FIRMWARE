@@ -1,0 +1,7 @@
+{
+  "scope": "Linked SDCC policy, CRC/parser, redundant config recovery and legacy odometer/calibration; EEPROM transport mocked",
+  "image_sha256": "f7af37e99cd8a7d2ffd5a847daf690d5ec25065d12d504a53c3ff67c9a5885c4",
+  "ASSERTIONS": 795,
+  "FAILURES": 0,
+  "FIRST_FAILURE": 0
+}
