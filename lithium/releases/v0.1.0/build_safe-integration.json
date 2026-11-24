@@ -1,6 +1,0 @@
-{
-  "image_sha256": "227b384dadb4a56ec37741b1b87e4e3f8543cbaa2a9964c605b04a036e2a9324",
-  "assertions": 90,
-  "failures": [],
-  "scope": "Exercise relay, command and timeout paths in the actual linked firmware image.\n\nUART register reads are injected and transmitted bytes captured. Generic C52 simulation cannot prove XC878 paged\nperipherals, clock timing, physical relays, EEPROM programming or watchdog reset."
-}

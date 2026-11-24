@@ -7,6 +7,7 @@
 void uart_isr(void) __interrupt(CC2_UART_INTERRUPT_VECTOR);
 
 uint8_t uart_rx_overflowed(void);
+uint8_t uart_try_putc(char value);
 
 void uart_init(void);
 void uart_putc(char value);

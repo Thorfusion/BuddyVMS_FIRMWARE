@@ -2,14 +2,19 @@
 
 ## Build
 
-Windows PowerShell, SDCC with MCS-51 support, its sdas8051/packihx helpers,
-Python 3, and uCsim `s51` are used. The build creates local helper shims when
+Windows PowerShell or PowerShell 7 on Linux, SDCC with MCS-51 support, its
+sdas8051/packihx helpers, Python 3, and uCsim `s51` 0.9.9 are used. Ubuntu's
+older bundled simulator is not suitable for these test commands; CI installs
+the upstream 0.9.9 package with a pinned SHA-256. Schema integration tests additionally use
+the neighboring BuddySoftware checkout's pure protocol module, supplied with
+`-DesktopSource` if it is elsewhere. This is a test dependency, not a firmware
+source/build dependency. The build creates local helper shims when
 a Windows SDCC archive has `cc1` without `.exe`. No newer-carcomputer source,
 network download or original firmware binary is required to build.
 
 ```powershell
 .\firmware\build.ps1 -Sdcc 'C:\Program Files\SDCC\bin\sdcc.exe' -Packihx 'C:\Program Files\SDCC\bin\packihx.exe'
-.\tools\verify_all.ps1
+.\tools\verify_all.ps1 -DesktopSource F:\Github\BuddySoftware
 ```
 
 Use `-SafeBringup` for the loads-disabled image. P-Flash is linked below F000,
@@ -106,10 +111,82 @@ incremental mileage persistence and speed calibration.
 Integration tests execute the actual normal/SAFE linked images with UART
 register reads injected and TX captured: output-latch decisions, raw ignition/charger interlocks,
 the timer-ISR lease cutoff, direction retention, mode/limit commands, a known
-BMS frame and byte-for-byte CC response including CRC. They also check all
+BMS input frame with CRC and the byte-for-byte schema Status response. They also check all
 four linked interrupt vectors, the UART receive ring and its overflow fault.
 A sampled stack-tail
 canary is checked; this is not an exhaustive worst-case stack proof.
+
+Version 0.2.0 adds native LF/CRLF parsing, IDENTIFY build/digest binding,
+non-blocking output, aggregate record counts, stale-data omission, unknown
+feedback, session event wrap, read-only EEPROM-transaction checks, and the
+actual BuddySoftware validator/parser/presenter. Reports cache storage status
+without reading either EEPROM. Slot diagnostics distinguish erased, invalid
+and I/O-failed storage without changing the persisted layout or boot policy.
+The matching immutable protocol.json and transcripts accompany each new HEX.
+Use `tools/make_release.ps1` to generate `releases/<build_id>` with the same
+dated version used by ID/IDENTIFY and R2. An existing release's HEX/protocol
+bytes cannot be replaced with different bytes under the same build ID.
+Existing v0.1.0, v0.2.0 and v0.2.1 artifacts are not overwritten. `-OutputDirectory PATH`
+keeps CI output separate from committed releases.
+
+Version 0.2.2 adds regression checks for RX-ring overflow tails, deliberate
+recovery at LF/hash/dollar boundaries, and valid fault clearing only after a
+fresh boundary. Service-command tests exercise charger, ignition, pending
+speed pulses and active drive-output interlocks, checking the numeric error
+and zero EEPROM transactions. Actual PC live decoding is checked for lithium
+pack voltage, current and the large original-format odometer, not just SOC.
+The report schemas, settings layout and charging/drive defaults are unchanged.
+
+## GitHub Build And R2 Publishing
+
+`.github/workflows/lithium.yml` compiles and tests on GitHub-hosted Ubuntu 24.04;
+it does not wait for a self-hosted runner. Pushes to main, lithium-tag pushes,
+pull requests touching lithium, and manual runs produce downloadable artifacts.
+Artifacts include the operational and SAFE HEX images, byte-matched protocol,
+flash-space report, source hashes and simulator/contract verification results.
+
+CI uses `-SkipDesktop` explicitly because the PC's new CC2 integration may not
+yet be published. Linked core/integration tests, offline schema tests and host
+release tests still run. Desktop checks are marked skipped, never passed.
+Locally, omit that switch and supply `-DesktopSource` to test the actual PC
+parser, presenter, identity merge and profile decoder as well.
+
+Publish only by pushing a `lithium-v*` tag, or running the workflow on main with
+`publish_r2` checked. Main pushes alone do not publish. There are no GitHub
+Releases. Configure these repository Actions secrets:
+
+| Secret | Purpose |
+|---|---|
+| R2_ACCESS_KEY_ID | R2 S3 API access key |
+| R2_SECRET_ACCESS_KEY | R2 S3 API secret |
+| R2_BUCKET | Existing firmware bucket |
+| R2_ENDPOINT_URL | HTTPS S3 endpoint for the R2 account |
+
+The only writable prefix is `buddy/old-cc-firmware/lithium`. The PC reads
+`https://filer.poldentek.no/buddy/old-cc-firmware/lithium/manifest.json`.
+The publisher creates a schema-2 channel manifest with matching dated build
+IDs, `<build-id>.hex`, protocol SHA-256 and XC878/LITHIUM identity. Firmware
+version, IDENTIFY, `$ID#`, build metadata and the download version are identical.
+The format is `YYYYMMDD-HHmmss.GITHUB_RUN_NUMBER` in Europe/Oslo, matching the
+newer firmware and PC software publisher; local builds use run 0. No separate
+semantic firmware version is assigned to new builds. The development/audit HEX
+names remain `CC2_LITHIUM.hex` and `CC2_LITHIUM_SAFE.hex`; R2 uses the dated
+normal download filename.
+
+Versioned HEX, protocol and release metadata are immutable: an existing build
+ID with different bytes aborts. Every object is downloaded again and compared
+before latest is published. Previous release history is merged from R2; only
+HTTP 404 means an absent manifest, not access failure. Uploads never delete
+objects or touch NiMH/new-carcomputer channels. The latest manifest is written
+last, after its immutable assets. SAFE remains an engineering artifact, not
+the automatic normal-firmware download. A deliberately older build cannot
+silently roll the channel backwards.
+
+Publication jobs are serialized by channel and latest-manifest writes use an
+atomic ETag precondition, so a concurrent history change aborts publication
+instead of overwriting it. Missing credentials or upload
+failures leave the build artifact available; they do not claim a successful
+R2 publication. Actual cloud uploads and vehicle testing are not simulator tests.
 
 EEPROM transports are mocked in policy/storage tests. C52 simulation does not
 model XC878 paged SFRs, the real watchdog, RS232 electronics, relay contacts,

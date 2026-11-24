@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from bms_protocol import BmsStatus, decode_cc, frame
+from bms_protocol import BmsStatus, frame
 
 
 class CodecTests(unittest.TestCase):
@@ -15,19 +15,12 @@ class CodecTests(unittest.TestCase):
         status = BmsStatus(65535, 18, 24, 7920, 3290, 3310, -100, 250, -1000, 500)
         self.assertIn(",-100,250,-1000,500*", status.encode())
 
-    def test_status(self):
-        decoded = decode_cc(frame("CC,1,1,0,2,1,0,0,0,0,0,0,500,0,0"))
-        self.assertEqual(decoded["soc_percent"], 50)
-        self.assertEqual(decoded["charge_mode"], 2)
-        self.assertEqual(decoded["drive_reason"], 0)
-
     def test_unknown_soc(self):
-        self.assertIsNone(decode_cc(frame("CC,1,0,0,1,1,0,0,0,0,0,0,65535,4294967295,0"))["soc_percent"])
         self.assertIn(",65535*", BmsStatus(1, 19, 24, 7920, 3290, 3310, 200, 250, 0, 65535).encode())
 
-    def test_crc_error(self):
+    def test_invalid_frame_characters(self):
         with self.assertRaises(ValueError):
-            decode_cc(frame("CC,1,1,0,2,1,0,0,0,0,0,0,500,0,0").replace(",500,", ",501,"))
+            frame("BMS,1,invalid#")
 
     def test_no_permission_by_default(self):
         status = BmsStatus(1, 16, 24, 7920, 3290, 3310, 200, 250, 0, 500)

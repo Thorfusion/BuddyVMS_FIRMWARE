@@ -1,0 +1,113 @@
+{
+  "format": "buddy.da64-report-protocol",
+  "schema": 1,
+  "cc2_profile": {
+    "schema": 1,
+    "id": "CC2_LITHIUM",
+    "mcu": "XC878",
+    "chemistry": "LITHIUM",
+    "service_baud": 19200,
+    "product_id": 3,
+    "supported_reports": {"1": 129, "2": 1, "3": 128, "4": 128, "6": 128, "7": 128, "8": 128, "9": 128, "13": 128, "15": 128},
+    "aggregate_reports": [2, 1, 3, 4, 6, 7, 8, 9, 13, 15],
+    "legacy_log": false,
+    "bms_bridge": false,
+    "adapter_input_version": 1,
+    "error_codes": {"2": "Unsupported command/report", "3": "Syntax/frame error", "4": "Interlock", "5": "Limits invalid or unconfigured", "6": "Storage operation failed", "7": "Fault-clear cause active", "20": "Report busy"},
+    "max_command_characters": 143,
+    "command_max_chars": 143,
+    "text_commands": ["IDENTIFY", "ID", "HELP"],
+    "unsupported_command_error": 2,
+    "busy_error": 20,
+    "storage_error": 6,
+    "interlock_error": 4,
+    "overflow_error": 3,
+    "schema_allocation": "128 and 129 are CC2 lithium-specific layouts. Status 129 omits unknown SOC instead of emitting a numeric sentinel. Schema 1 retains the unchanged Version layout. Not a DA64 hardware profile."
+  },
+  "reports": {
+    "1": {"name": "Status", "schema_versions": [129], "fields": {
+      "1": {"title": "Live vehicle and lithium charge state", "columns": ["vehicle_state", "charge_state", "speed_kmh", "fault_mask_lo_hex", "fault_mask_hi_hex"]},
+      "2": {"title": "Permissions and sample freshness", "columns": ["ignition", "charger_connected", "drive_entry_permitted", "drive_state", "charge_reason", "drive_reason", "soc_valid", "bms_fresh", "bms_age_ms", "uptime_ms"]},
+      "3": {"title": "Valid adapter SOC; omitted if unavailable", "columns": ["soc_pct"]}
+    }},
+    "2": {"name": "Version", "schema_versions": [1], "fields": {
+      "1": {"title": "Firmware schemas", "columns": ["product_id", "config_schema", "error_log_schema"]}
+    }},
+    "3": {"name": "Temperatures", "schema_versions": [128], "fields": {
+      "1": {"title": "Pack-temperature availability", "columns": ["bms_fresh", "bms_age_ms", "temperature_source"]},
+      "2": {"title": "Valid adapter pack-temperature extrema; omitted if stale", "columns": ["pack_min_dC", "pack_max_dC"]}
+    }},
+    "4": {"name": "Electrical", "schema_versions": [128], "fields": {
+      "1": {"title": "Adapter sample availability", "columns": ["bms_fresh", "bms_age_ms", "bms_sequence", "soc_valid"]},
+      "2": {"title": "Valid adapter measurements; omitted if stale", "columns": ["pack_cV", "cell_min_mV", "cell_max_mV", "series_cells", "current_dA", "bms_flags_hex"]},
+      "3": {"title": "Valid adapter SOC; omitted if unavailable", "columns": ["bms_soc_centipercent"]}
+    }},
+    "6": {"name": "Charging", "schema_versions": [128], "fields": {
+      "1": {"title": "Lithium charging decision and output latch", "columns": ["charge_mode", "charge_state", "charge_reason", "charge_requested", "charge_applied", "charger_connected", "ignition", "motion_detected", "drive_outputs_active", "supervised", "fault_mask_lo_hex"]}
+    }},
+    "7": {"name": "Configuration", "schema_versions": [128], "fields": {
+      "1": {"title": "Effective modes and saved-settings state", "columns": ["charge_mode", "drive_mode", "settings_source", "settings_sequence", "settings_dirty", "limits_valid"]},
+      "2": {"title": "Effective fan, speed and timing settings", "columns": ["fan_on_dC", "fan_off_dC", "speed_pulses_per_100m", "bms_timeout_ms", "charge_qualification_ms", "foreground_lease_ms", "safe_build"]},
+      "3": {"title": "Configured supervised limits; omitted until valid", "columns": ["series_cells", "cell_min_mV", "cell_max_mV", "charge_min_dC", "charge_max_dC", "drive_min_dC", "drive_max_dC", "charge_max_dA", "discharge_max_dA", "charge_max_s"]}
+    }},
+    "8": {"name": "Relay Status", "schema_versions": [128], "fields": {
+      "2": {"title": "Requests and MCU output latches; no physical feedback fitted", "columns": ["relay_requested_hex", "relay_applied_hex", "relay_feedback_hex", "relay_feedback_valid_hex"], "presentation": {"validity_masks": {"relay_feedback_hex": "relay_feedback_valid_hex"}}},
+      "3": {"title": "Raw digital input pin levels, not interpreted activity", "columns": ["raw_inputs_hex"]}
+    }},
+    "9": {"name": "Faults And Session Events", "schema_versions": [128], "fields": {
+      "1": {"title": "Latched faults and current-session history boundary", "columns": ["fault_mask_lo_hex", "fault_mask_hi_hex", "latched_count", "snapshot_event_sequence", "retained_events"]},
+      "2": {"title": "Latched fault", "columns": ["fault_code", "latched"]},
+      "3": {"title": "RAM session transition", "columns": ["slot", "sequence", "uptime_ms", "charge_state", "charge_reason", "fault_mask_lo_hex", "fault_mask_hi_hex"], "presentation": {"ordering": {"type": "wrapping_sequence", "sequence_column": "sequence", "reference_field": 1, "reference_column": "snapshot_event_sequence", "counter_bits": 16, "label_column": "slot", "label_prefix": "Session entry", "note": "RAM-only current boot session. Uptime and sequence reset on reboot; not calendar time or a persistent journal."}}}
+    }},
+    "13": {"name": "Storage Integrity", "schema_versions": [128], "fields": {
+      "1": {"title": "Lithium settings and separate storage failure counters", "columns": ["settings_source", "settings_sequence", "settings_dirty", "vms_transfer_failures", "display_transfer_failures", "settings_slot_a_state", "settings_slot_b_state"]},
+      "5": {"title": "Preserved legacy motion records", "columns": ["odometer_source", "speed_calibration_source", "legacy_write_phase", "legacy_write_failures", "vms_boot_read_ok", "display_boot_read_ok"]},
+      "6": {"title": "Dashboard communication, not EEPROM availability", "columns": ["display_ack_mask_hex", "display_write_failures", "display_updates", "display_last_ok"]}
+    }},
+    "15": {"name": "Lifetime And Trip", "schema_versions": [128], "fields": {
+      "1": {"title": "Odometer availability and current uptime", "columns": ["odometer_valid", "odometer_source", "uptime_ms"]},
+      "2": {"title": "Preserved odometer in metres; omitted if no valid legacy copy", "columns": ["odometer_m", "committed_odometer_m"]},
+      "3": {"title": "RAM trip and effective speed calibration", "columns": ["trip_dkm", "speed_pulses_per_100m"]}
+    }}
+  },
+  "enums": {
+    "product_id": {"3": "PoldenTEK CC2 Lithium (XC878)"},
+    "vehicle_state": {"0": "Idle", "1": "Charger connected", "2": "Ignition"},
+    "charge_state": {"0": "Idle", "1": "Waiting", "2": "Qualifying", "3": "Charge requested", "4": "Completed", "5": "Fault latched"},
+    "drive_state": {"0": "Off", "1": "Start delay", "2": "Motor wait", "3": "Running", "4": "Waiting for stop", "5": "Direction deadtime"},
+    "charge_mode": {"0": "Off", "1": "External BMS / FORCE", "2": "Protocol supervised"},
+    "drive_mode": {"0": "Off", "1": "External BMS", "2": "Protocol supervised"},
+    "charge_reason": {"0": "No inhibit", "1": "Mode disabled", "2": "Ignition on", "3": "Motion or drive outputs active", "4": "Limits not configured", "5": "Adapter unavailable", "6": "Permission denied", "7": "Completed", "8": "Fault latched"},
+    "drive_reason": {"0": "No inhibit", "1": "Mode disabled", "2": "Ignition on", "3": "Motion or drive outputs active", "4": "Limits not configured", "5": "Adapter unavailable", "6": "Permission denied or charger connected", "7": "Completed", "8": "Fault latched"},
+    "settings_source": {"0": "Erased: effective defaults, no saved lithium record", "1": "Lithium slot A", "2": "Lithium slot B", "3": "Unavailable or invalid non-erased records: both modes default OFF"},
+    "settings_slot_a_state": {"0": "Not observed", "1": "Erased", "2": "Valid lithium record", "3": "Invalid record or unsupported settings", "4": "I/O failure; current record validity unknown"},
+    "settings_slot_b_state": {"0": "Not observed", "1": "Erased", "2": "Valid lithium record", "3": "Invalid record or unsupported settings", "4": "I/O failure; current record validity unknown"},
+    "odometer_source": {"0": "No valid legacy copy", "1": "VMS primary", "2": "VMS mirror", "3": "Dashboard"},
+    "speed_calibration_source": {"0": "Default", "1": "Dashboard", "2": "VMS primary", "3": "VMS mirror"},
+    "temperature_source": {"0": "Unavailable", "1": "BMS adapter pack extrema; not front/rear/box sensors"},
+    "error_log_schema": {"0": "No persistent error log"}
+  },
+  "boolean_fields": ["ignition", "charger_connected", "drive_entry_permitted", "soc_valid", "bms_fresh", "charge_requested", "charge_applied", "motion_detected", "drive_outputs_active", "supervised", "settings_dirty", "limits_valid", "safe_build", "latched", "display_last_ok", "odometer_valid", "vms_boot_read_ok", "display_boot_read_ok"],
+  "text_fields": [],
+  "boolean_text": {
+    "vms_boot_read_ok": ["No successful VMS boot read observed", "Successful VMS boot read observed"],
+    "display_boot_read_ok": ["No successful display-EEPROM boot read observed", "Successful display-EEPROM boot read observed"],
+    "settings_dirty": ["Matches saved settings", "Effective settings are not saved"],
+    "charge_applied": ["Charge-enable MCU latch inactive", "Charge-enable MCU latch active; current flow not verified"]
+  },
+  "decimal_fields": [],
+  "bitfields": {
+    "bms_flags_hex": [{"bit": 0, "label": "Charge permitted"}, {"bit": 1, "label": "Drive permitted"}, {"bit": 2, "label": "Charge complete"}, {"bit": 3, "label": "BMS fault"}, {"bit": 4, "label": "Electrical and temperature measurements valid"}],
+    "relay_requested_hex": [{"bit": 0, "label": "Charge enable"}, {"bit": 1, "label": "Motor relay"}, {"bit": 2, "label": "Footswitch relay"}, {"bit": 3, "label": "Reverse-direction relay"}, {"bit": 4, "label": "Cooling fan"}],
+    "relay_applied_hex": [{"bit": 0, "label": "Charge enable MCU latch"}, {"bit": 1, "label": "Motor MCU latch"}, {"bit": 2, "label": "Footswitch MCU latch"}, {"bit": 3, "label": "Reverse-direction MCU latch"}, {"bit": 4, "label": "Fan MCU latch"}],
+    "relay_feedback_hex": [{"bit": 0, "label": "Charge enable feedback"}, {"bit": 1, "label": "Motor feedback"}, {"bit": 2, "label": "Footswitch feedback"}, {"bit": 3, "label": "Direction feedback"}, {"bit": 4, "label": "Fan feedback"}],
+    "raw_inputs_hex": [{"bit": 0, "label": "Ignition pin high (ignition active low)"}, {"bit": 1, "label": "Charger pin high"}, {"bit": 2, "label": "Direction pin high"}, {"bit": 3, "label": "Trip pin high"}, {"bit": 4, "label": "Speed pin high"}],
+    "display_ack_mask_hex": [{"bit": 0, "label": "Speed driver A acknowledged"}, {"bit": 1, "label": "Speed driver B acknowledged"}, {"bit": 2, "label": "Trip driver acknowledged"}, {"bit": 3, "label": "Banked driver acknowledged"}]
+  },
+  "faults": {"1": "BMS adapter expired during supervised operation", "2": "BMS fault", "3": "Cell voltage or count outside configured limits", "4": "Temperature outside configured limits", "5": "Current outside configured limits", "6": "Supervised charge timeout", "7": "Foreground control lease expired", "8": "UART receive overflow"},
+  "numeric_conversions": {},
+  "field_labels": {"current_dA": "Battery current (positive charging)", "pack_cV": "BMS measured pack voltage", "cell_min_mV": "Lowest BMS cell voltage", "cell_max_mV": "Highest BMS cell voltage", "pack_min_dC": "Lowest BMS pack temperature", "pack_max_dC": "Highest BMS pack temperature", "settings_dirty": "Effective settings not saved", "odometer_m": "Current odometer", "committed_odometer_m": "Last fully committed odometer"},
+  "error_log_events": [],
+  "event_sources": {},
+  "events": []
+}

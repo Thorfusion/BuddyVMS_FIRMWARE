@@ -13,6 +13,7 @@ static uint32_t retry_time;
 static uint8_t retry_pending;
 static uint8_t phase;
 static uint8_t bytes[5];
+static uint8_t boot_read_mask;
 
 static uint8_t read_checked(uint8_t display, uint16_t address, uint8_t length, uint32_t *value)
 {
@@ -21,6 +22,7 @@ static uint8_t read_checked(uint8_t display, uint16_t address, uint8_t length, u
     uint32_t result = 0UL;
     if (!(display ? display_eeprom_read(address, bytes, length + 1u) :
           vehicle_eeprom_read(address, bytes, length + 1u))) return 0u;
+    boot_read_mask |= display ? 2u : 1u;
     for (i = 0u; i <= length; i++) {
         sum += bytes[i];
         if (i < length) result = (result << 8) | bytes[i];
@@ -49,6 +51,7 @@ void legacy_init(void)
     uint32_t value;
     uint8_t i;
     odo_source = calibration_source = phase = retry_pending = 0u;
+    boot_read_mask = 0u;
     failures = 0u;
     committed = last_save = 0UL;
     /* Largest valid copy avoids rollback after an interrupted three-copy save. */
@@ -115,3 +118,4 @@ uint8_t legacy_speed_source(void) { return calibration_source; }
 uint16_t legacy_write_failures(void) { return failures; }
 uint8_t legacy_write_phase(void) { return phase; }
 uint32_t legacy_committed_odometer(void) { return committed; }
+uint8_t legacy_boot_read_mask(void) { return boot_read_mask; }

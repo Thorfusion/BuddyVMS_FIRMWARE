@@ -6,5 +6,4 @@ uint16_t protocol_crc_byte(uint16_t crc, uint8_t value);
 uint8_t protocol_split(char *line, char **fields, uint8_t maximum);
 uint8_t protocol_number(const char *text, int32_t *value);
 uint8_t protocol_receive_bms(char *line, uint32_t now);
-void protocol_send_status(void);
 #endif

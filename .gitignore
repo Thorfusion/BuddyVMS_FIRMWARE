@@ -1,0 +1,15 @@
+# Local build, packaging and publishing output.
+/ci-output/
+/publish/
+/dist/
+/releases/
+/lithium/releases/*
+!/lithium/releases/README.md
+
+# Python tooling caches and local environments.
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

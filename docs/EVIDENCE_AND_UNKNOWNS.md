@@ -29,8 +29,12 @@ The copied original image has SHA-256
 | `0xCC99` | P4.0/P4.4/P5.0/P0.5 digital input sampling |
 | `0xCBB1` | P4.5..P4.7 ADG408 selector patterns |
 | `0xBB69..0xBBDE` | ADC selector and result path; P3.0 activity LED |
-| `0xDFAA/0xDFAD` | P3.1 TX activity LED, active low |
+| `0xDFAA/0xDFAD`, called at `0xD4DE/0xD4E4` | P3.1 scheduled controller-work LED, active low; original UART byte launcher `0xAFFB` does not control it |
 | `0xDF9E..0xDFA7` | P0.7/P0.6 display bank-control helpers |
+
+The current starter uses this LED around UART byte transmission.
+That implementation differs from the original evidence above. Do not infer
+original UART wiring or a transmitted byte from a controller-work LED pulse.
 
 ## Open Hardware Questions
 

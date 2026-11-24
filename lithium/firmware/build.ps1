@@ -3,6 +3,7 @@ param(
     [string]$Packihx = "packihx",
     [switch]$Clean,
     [switch]$Tests,
+    [string]$BuildId = "",
     [switch]$SafeBringup
 )
 
@@ -29,6 +30,35 @@ if ($Clean -and (Test-Path $BuildDir)) {
     Remove-Item -LiteralPath $BuildDir -Recurse -Force
 }
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
+
+$protocolPath = Join-Path (Split-Path -Parent $Root) "protocol/protocol.json"
+$protocol = Get-Content -LiteralPath $protocolPath -Raw | ConvertFrom-Json
+if ($protocol.format -ne 'buddy.da64-report-protocol' -or $protocol.schema -ne 1 -or
+    $protocol.cc2_profile.id -ne 'CC2_LITHIUM' -or $protocol.cc2_profile.chemistry -ne 'LITHIUM' -or
+    $protocol.cc2_profile.service_baud -ne 19200) { throw 'Invalid lithium report profile.' }
+$protocolHash = (Get-FileHash -LiteralPath $protocolPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if (-not $BuildId) {
+    try { $zone = [TimeZoneInfo]::FindSystemTimeZoneById('Europe/Oslo') }
+    catch { $zone = [TimeZoneInfo]::FindSystemTimeZoneById('W. Europe Standard Time') }
+    $stamp = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $zone).ToString('yyyyMMdd-HHmmss')
+    $run = if ($env:GITHUB_RUN_NUMBER) { $env:GITHUB_RUN_NUMBER } else { '0' }
+    $BuildId = "$stamp.$run"
+}
+if ($BuildId -notmatch '^\d{8}-\d{6}\.\d+$') { throw 'Invalid release build ID.' }
+$aggregate = @($protocol.cc2_profile.aggregate_reports)
+@(
+    '#ifndef CC2_BUILD_H'
+    '#define CC2_BUILD_H'
+    ('#define CC2_BUILD_ID "{0}"' -f $BuildId)
+    ('#define CC2_PROTOCOL_SHA256 "{0}"' -f $protocolHash)
+    ('#define CC2_AGGREGATE_COUNT {0}u' -f $aggregate.Count)
+    ('static const uint8_t __code cc2_aggregate_reports[] = {{ {0} }};' -f ($aggregate -join ', '))
+    ('static const uint8_t __code cc2_report_versions[] = {{ {0} }};' -f ((0..15 | ForEach-Object {
+        $value = $protocol.cc2_profile.supported_reports.PSObject.Properties["$_"]
+        if ($value) { [int]$value.Value } else { 0 }
+    }) -join ', '))
+    '#endif'
+) | Set-Content -LiteralPath (Join-Path $BuildDir 'cc2_build.h') -Encoding ascii
 
 $sdccCommand = Get-Command $Sdcc -ErrorAction SilentlyContinue
 $packihxCommand = Get-Command $Packihx -ErrorAction SilentlyContinue
@@ -68,6 +98,7 @@ $commonFlags = @(
     "--stack-auto",
     "--std-sdcc99",
     "--opt-code-size",
+    "-I$BuildDir",
     "-I$IncludeDir"
 )
 if ($SafeBringup) {
@@ -91,7 +122,7 @@ $sources = @(
     "legacy.c",
     "safety.c",
     "controller.c",
-    "telemetry.c",
+    "reports.c",
     "commands.c",
     "main.c"
 )
@@ -180,6 +211,9 @@ $hexHash = (Get-FileHash -Algorithm SHA256 $hexPath).Hash.ToLowerInvariant()
     image = $hexName
     profile = $(if ($Tests) { "simulator-only" } elseif ($SafeBringup) { "safe" } else { "external-bms-default" })
     sha256 = $hexHash
+    version = $BuildId
+    build_id = $BuildId
+    protocol_sha256 = $protocolHash
     p_capacity = $pFlashLimit
     p_used = $programmed
     p_free = $pFlashLimit - $programmed

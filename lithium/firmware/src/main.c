@@ -8,6 +8,7 @@
 #include "legacy.h"
 #include "safety.h"
 #include "settings.h"
+#include "reports.h"
 #include "speed.h"
 #include "timebase.h"
 #include "uart.h"
@@ -35,7 +36,7 @@ void main(void)
     timebase_init();
     safety_reset();
     watchdog_start();
-    uart_puts("$BOOT," CC2_FIRMWARE_NAME "," CC2_FIRMWARE_VERSION "#\r\n");
+    reports_init();
 
     while (1) {
         now = timebase_uptime_ms();
@@ -50,6 +51,7 @@ void main(void)
             legacy_service(now, !drive_ignition_on() && speed_kmh() == 0u);
         }
         commands_poll();
+        reports_poll();
         now = timebase_uptime_ms();
         if ((uint32_t)(now - display_time) >= CC2_DISPLAY_PERIOD_MS) {
             display_time = now;

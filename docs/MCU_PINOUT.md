@@ -38,10 +38,10 @@ the starter does not drive it.
 
 | MCU pin | Function | Notes |
 |---|---|---|
-| `P1.0` | UART RX | Page-2 alternate routing pair selects UART input |
+| `P1.0` | UART RX | `MODPISEL.URRIS` selects the UART input; host TX connects here |
 | `P1.1` | UART TX | Page-2 alternate routing pair; verified service connection |
 | `P3.0` | ADC/activity LED | Active low; independent of UART pins |
-| `P3.1` | UART TX LED | Active low; independent of UART TX |
+| `P3.1` | Controller-work LED in original CC2 | Active low; starter currently repurposes it for UART-transmit activity |
 | `P5.7` | I2C SDA | Use byte masks on `P5_DATA`/`P5_DIR` |
 | `P5.5` | I2C SCL | Use byte masks on `P5_DATA`/`P5_DIR` |
 | `P0.7` | Dashboard pin 15 | Display bank control |
@@ -50,6 +50,12 @@ the starter does not drive it.
 | `P1.3` | AT25128A MOSI/SI | SSC alternate function `MTSR_0` |
 | `P1.4` | AT25128A MISO/SO | SSC alternate function `MRST_0` |
 | `P1.5` | AT25128A `/CS` | Software-controlled active-low chip select |
+
+
+The original CC2 activates P3.1 around scheduled work, not around each
+transmitted byte. The current starter's `uart_putc` drives the same independent
+LED as `UART_TX_LED_N`. Distinguish firmware behavior from physical wiring
+when using the LED to diagnose communication.
 
 ## Analog Channels
 

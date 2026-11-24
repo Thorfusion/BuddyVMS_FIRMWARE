@@ -72,22 +72,26 @@ not a substitute for BMS protection or configured operating limits.
 OFF and EXTERNAL do not become SUPERVISED merely because packets arrive.
 EXTERNAL deliberately ignores their charge/drive permissions and completion.
 
-## CC To Adapter
+## CC To Adapter And Desktop
 
-Every accepted BMS packet, and STATUS/REPORT requests, returns:
+The old `$CC,...*CRC#` response was removed in v0.2.0. The adapter receives the
+same structured Status report as the desktop. See [PC report schema](PC_REPORTS.md)
+and the release's exact `protocol.json`. Normal example with no active fault:
 
 ```text
-$CC,1,seq,uptime_ms,charge_mode,drive_mode,charge_state,charge_reason,faults,drive_state,outputs,speed_kmh,soc10,bms_age_ms,drive_reason*HHHH#
+@B,1,129
+@D,1,1,0,0,0,0000,0000
+@D,1,2,0,0,1,0,0,0,1,1,0,0
+@D,1,3,50
+@E,1,3
 ```
 
-Sequence echoes the last accepted packet; uptime is unsigned 32-bit ms.
-Modes/states/reasons/fault bits are in [control behavior](BEHAVIOR.md).
-Outputs are MCU output-latch requests: 1 charge, 2 motor, 4 footswitch,
-8 reverse-direction relay, 16 fan. They are not contactor-feedback measurements.
-SOC 65535 means unknown/stale; age 4294967295 means no packet received.
-Drive states are 0 OFF, 1 start delay, 2 motor wait, 3 running, 4 wait stop,
-5 direction deadtime. There is no unsolicited automatic stream before an
-adapter starts sending packets; each fresh packet gives one status response.
+Accepted adapter packets normally trigger a Status response when output is
+idle. During an outstanding report, telemetry is still accepted and safety
+policy updated, but an extra Status is not opened inside the report. The
+adapter must allow completion of a bulk report, continue fresh measurements,
+and never reset its own cell protections because PC diagnostics are busy.
+There is no unsolicited automatic stream before packets or read commands.
 
 The adapter should also treat a missing CC response as a link failure in its
 own policy. No claim of end-to-end safety certification is made by this CRC
@@ -95,14 +99,15 @@ and heartbeat scheme.
 
 ## Tools
 
-`tools/bms_protocol.py` exports `BmsStatus.encode()` and `decode_cc()` for an
-adapter implementation. It also encodes frames and decodes status at a terminal:
+`tools/bms_protocol.py` exports `BmsStatus.encode()` for an adapter
+implementation and prints input frames at a terminal:
 
 ```powershell
 python .\tools\bms_protocol.py --sequence 1 --flags 19 --cells 24 --pack-cv 7920 --cell-min-mv 3290 --cell-max-mv 3310 --temp-min-dc 200 --temp-max-dc 250 --current-da 100 --soc10 500
 ```
 
 That command prints a frame only; it does not connect to or energize a device.
-Ordinary service commands are unchecksummed `$COMMAND#` frames, separate from
-the checksummed BMS telemetry schema. Unknown/malformed input gets an ERR
-response and does not update freshness.
+Desktop commands use native LF/CRLF framing and structured responses. Old
+`$COMMAND#` wrappers remain explicit aliases. Unknown/malformed adapter input
+gets a numeric schema error and does not update freshness. A CRC applies to
+adapter input only, not to the established desktop report envelope.

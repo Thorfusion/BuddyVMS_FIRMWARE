@@ -2,7 +2,6 @@
 import argparse
 import binascii
 from dataclasses import dataclass
-import json
 
 VALID = 16
 CHARGE = 1
@@ -52,48 +51,18 @@ class BmsStatus:
         return frame("BMS," + ",".join(str(x) for x in values))
 
 
-CC_FIELDS = ("sequence", "uptime_ms", "charge_mode", "drive_mode", "charge_state",
-             "charge_reason", "faults", "drive_state", "outputs", "speed_kmh",
-             "soc10", "bms_age_ms", "drive_reason")
-
-
-def decode_cc(text: str) -> dict:
-    text = text.rstrip("\r\n")
-    if not text.startswith("$") or not text.endswith("#") or text.count("*") != 1:
-        raise ValueError("invalid frame")
-    body, checksum = text[1:-1].split("*")
-    if len(checksum) != 4 or any(c not in "0123456789ABCDEF" for c in checksum):
-        raise ValueError("invalid checksum field")
-    if binascii.crc_hqx(body.encode("ascii"), 0xFFFF) != int(checksum, 16):
-        raise ValueError("CRC mismatch")
-    values = body.split(",")
-    if values[:2] != ["CC", "1"] or len(values) != 15:
-        raise ValueError("unsupported status schema")
-    if any(not x.isascii() or not x.isdigit() for x in values[2:]):
-        raise ValueError("invalid number")
-    result = dict(zip(CC_FIELDS, map(int, values[2:])))
-    if any(x > 0xFFFFFFFF for x in result.values()):
-        raise ValueError("field overflow")
-    result["soc_percent"] = None if result["soc10"] == 65535 else result["soc10"] / 10
-    return result
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--decode")
     parser.add_argument("--sequence", type=int, default=1)
     parser.add_argument("--flags", type=int, default=VALID)
     for name in ("cells", "pack-cv", "cell-min-mv", "cell-max-mv",
                  "temp-min-dc", "temp-max-dc", "current-da", "soc10"):
         parser.add_argument("--" + name, type=int)
     args = parser.parse_args()
-    if args.decode:
-        print(json.dumps(decode_cc(args.decode), indent=2))
-    else:
-        values = {key: value for key, value in vars(args).items() if key != "decode"}
-        if any(value is None for value in values.values()):
-            parser.error("all measurement fields are required when encoding")
-        print(BmsStatus(**values).encode())
+    values = vars(args)
+    if any(value is None for value in values.values()):
+        parser.error("all measurement fields are required when encoding")
+    print(BmsStatus(**values).encode())
 
 
 if __name__ == "__main__":

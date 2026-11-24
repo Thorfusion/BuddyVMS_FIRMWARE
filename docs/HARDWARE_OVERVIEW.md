@@ -22,7 +22,12 @@ objects. Do not mistake XDATA at `0xF000` for code at `0xF000`.
 | Function | Hardware path |
 |---|---|
 | Service UART / bootstrap loader | `P1.0` RX, `P1.1` TX, 19200 8N1 in the original application |
-| Relay outputs | `P0.3`, `P0.4`, `P3.4..P3.7` |
+| Charger start/stop | Charge-enable relay, `P3.4`, active low in the original firmware |
+| Charger full-mode selection | Full-charge/Ah relay, `P3.6`; used for full mode, maintenance top-ups and balancing in the original firmware |
+| Battery cooling | Fan relay, `P3.7` |
+| Motor-controller relay control | Q6 motor-relay circuit, `P3.5`; physical enable/inhibit effect depends on contacts and vehicle wiring |
+| Forward/reverse selection | Direction relay, `P0.3` |
+| Pedal/footswitch permission | Footswitch relay, `P0.4`; removing the permission can interrupt drive |
 | Auxiliary outputs | `P1.7` DC/DC force, `P4.2` buzzer, `P5.2` standby auxiliary |
 | Digital inputs | `P4.0`, `P4.1`, `P4.4`, `P5.0`, `P0.5`, plus one unresolved optocoupler input |
 | Analog inputs | AN0 voltage mux, AN1/AN2 shunt paths, AN3 light, AN4..AN7 temperature inputs |
@@ -30,7 +35,17 @@ objects. Do not mistake XDATA at `0xF000` for code at `0xF000`.
 | Display bus | Bit-banged I2C on `P5.7` SDA and `P5.5` SCL; bank lines `P0.7/P0.6` |
 | Persistent vehicle storage | AT25128A 16 KiB SPI EEPROM on `P1.2..P1.5` |
 | Display storage | M24C02/24C02 256-byte I2C EEPROM at 7-bit address `0x51` |
-| Status LEDs | `P3.0` ADC/activity and `P3.1` UART-transmit activity, both active low |
+| Status LEDs, original CC2 | `P3.0` measurement/ADC activity and `P3.1` scheduled controller-work activity, both active low |
+
+Use the functional load names above in owner-facing behavior guides. Keep pin
+numbers, electrical polarity and connector tracing in this hardware reference.
+A relay request does not prove that its contacts operated or current flowed.
+
+The current basic starter uses `UART_TX_LED_N` on P3.1 around `uart_putc`.
+That is a starter-firmware choice, not the original CC2 meaning: the original
+brackets scheduled work, and its UART byte launcher does not control this LED.
+This documentation correction does not change the starter implementation.
+The starter still has no maintenance or battery-chemistry charging controller.
 
 The root connector drawing is copied to
 `reference/Schematic_Buddy_2026-07-05.png`. It does not show the dashboard

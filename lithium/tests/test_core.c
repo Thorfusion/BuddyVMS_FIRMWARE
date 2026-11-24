@@ -16,6 +16,7 @@ static uint32_t odo;
 static uint16_t speed_cal;
 static int16_t write_budget;
 static uint16_t write_calls;
+static uint8_t read_error;
 static uint16_t case_id;
 static li_inputs_t inputs;
 static li_packet_t packet;
@@ -29,6 +30,7 @@ static void check(uint8_t result)
 
 uint8_t vehicle_eeprom_read(uint16_t address, uint8_t *data, uint8_t count)
 {
+    if (read_error) return 0u;
     if (address + count <= 512u) { memcpy(data, &vms_low[address], count); return 1u; }
     if (address < SETTINGS_SLOT_A || address + count > SETTINGS_SLOT_A + 128u) return 0u;
     memcpy(data, &eeprom[address - SETTINGS_SLOT_A], count);
@@ -267,9 +269,15 @@ static void settings_tests(void)
     case_id = 40u;
     memset(eeprom, 0xFF, sizeof(eeprom)); write_budget = -1; write_calls = 0u;
     baseline(); check(!settings_load());
+    check(settings_dirty());
+    check(settings_slot_state(0u) == 1u && settings_slot_state(1u) == 1u);
     check(!write_calls && li_config.charge_mode == LI_MODE_EXTERNAL);
     li_config.charge_mode = LI_MODE_OFF;
     check(settings_save() && settings_source() == 1u && settings_sequence() == 1UL);
+    check(!settings_dirty());
+    check(settings_slot_state(0u) == 2u);
+    li_config.drive_mode = LI_MODE_OFF; check(settings_dirty());
+    li_config.drive_mode = LI_MODE_EXTERNAL; check(!settings_dirty());
     memcpy(backup, eeprom, 64u);
     for (cut = 0; cut <= 49; cut++) {
         case_id = 100u + (uint16_t)cut;
@@ -301,6 +309,10 @@ static void settings_tests(void)
     check(settings_load() == 2u && li_config.cells == 24u && li_config.charge_max_seconds == 3600u);
     memset(eeprom, 0u, sizeof(eeprom)); li_init();
     check(settings_load() == 3u && li_config.charge_mode == LI_MODE_OFF && li_config.drive_mode == LI_MODE_OFF);
+    check(settings_slot_state(0u) == 3u && settings_slot_state(1u) == 3u);
+    read_error = 1u; li_init();
+    check(settings_load() == 3u && settings_slot_state(0u) == 4u && settings_slot_state(1u) == 4u);
+    read_error = 0u;
 }
 
 static void seed_record(uint8_t *data, uint32_t value, uint8_t count)
@@ -327,6 +339,7 @@ static void legacy_tests(void)
         legacy_init();
         expected_source = mask & 4u ? 3u : mask & 2u ? 2u : mask & 1u ? 1u : 0u;
         check(legacy_odometer_source() == expected_source);
+        check(legacy_boot_read_mask() == 3u);
         check(odo == (uint32_t)expected_source * 1000UL && !write_calls);
         odo++;
         legacy_service(1UL, 0u); check(!write_calls);

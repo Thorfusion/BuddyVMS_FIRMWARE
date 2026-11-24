@@ -40,8 +40,16 @@ void uart_init(void)
     RI = 0;
     TI = 0;
     rx_head = rx_tail = rx_overflow = 0u;
-    tx_done = 0u;
+    tx_done = 1u;
     IE |= 0x10u;
+}
+
+uint8_t uart_try_putc(char value)
+{
+    if (!tx_done) return 0u;
+    tx_done = 0u;
+    SBUF = (uint8_t)value;
+    return 1u;
 }
 
 void uart_putc(char value)

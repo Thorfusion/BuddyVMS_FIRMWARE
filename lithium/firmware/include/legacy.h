@@ -9,4 +9,5 @@ uint8_t legacy_speed_source(void);
 uint16_t legacy_write_failures(void);
 uint8_t legacy_write_phase(void);
 uint32_t legacy_committed_odometer(void);
+uint8_t legacy_boot_read_mask(void);
 #endif

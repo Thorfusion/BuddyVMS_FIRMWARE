@@ -4,7 +4,7 @@ P0.4,output,footswitch relay,high assumed,high pin medium polarity,original outp
 P0.5,input,trip button,raw,high,read by original input sampler
 P0.6,output,dashboard pin 16/bank select,bank dependent,high,return high after bank transaction
 P0.7,output,dashboard pin 15/bank select,bank dependent,high,return high after bank transaction
-P1.0,input,UART RX,UART,high,page-2 UART route
+P1.0,input,UART RX,UART,high,MODPISEL.URRIS input selection
 P1.1,output,UART TX,UART,high,page-2 UART route
 P1.2,output,AT25128A SCK,SPI,high,XC878 SSC SCK_0
 P1.3,output,AT25128A MOSI/SI,SPI,high,XC878 SSC MTSR_0
@@ -12,7 +12,7 @@ P1.4,input,AT25128A MISO/SO,SPI,high,XC878 SSC MRST_0
 P1.5,output,AT25128A chip select,low,high,software chip select
 P1.7,output,DC/DC force,high assumed,high pin medium semantics,meter-confirmed role
 P3.0,output,ADC/activity LED,low,high,independent LED
-P3.1,output,UART transmit LED,low,high,independent LED not UART TX
+P3.1,output,original controller-work LED,low,high,independent LED currently used as UART TX activity by starter firmware
 P3.4,output,charge-enable relay,low,high,proven active-low
 P3.5,output,Q6 motor-relay enable,high assumed,high pin medium polarity,original output driver and meter mapping
 P3.6,output,full-charge/Ah relay,high assumed,high pin medium polarity,original charger driver and meter mapping

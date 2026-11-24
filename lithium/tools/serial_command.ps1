@@ -1,9 +1,9 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Port,
-    [string]$Command = '$STATUS#',
+    [string]$Command = 'IDENTIFY',
     [ValidateRange(100, 60000)]
-    [int]$ListenMs = 1000,
+    [int]$ListenMs = 3000,
     [switch]$Monitor
 )
 
@@ -21,6 +21,7 @@ try {
     $serial.DiscardInBuffer()
     if ($Command.Length -ne 0) {
         $serial.Write($Command)
+        if (-not $Command.StartsWith('$') -and -not $Command.EndsWith("`n")) { $serial.Write("`n") }
     }
 
     if ($Monitor) {

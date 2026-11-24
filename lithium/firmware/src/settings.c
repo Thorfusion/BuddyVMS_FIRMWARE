@@ -2,11 +2,14 @@
 #include "protocol.h"
 #include "settings.h"
 #include "vehicle_eeprom.h"
+#include <string.h>
 
 static uint8_t source;
 static uint32_t sequence;
 static uint8_t record[SETTINGS_RECORD_SIZE];
 static uint8_t unrecognized_storage;
+static li_config_t saved_config;
+static uint8_t slot_states[2];
 
 static void put16(uint8_t offset, uint16_t value)
 {
@@ -27,16 +30,21 @@ static uint32_t record_sequence(void)
 static uint8_t read_record(uint16_t address)
 {
     uint8_t i;
+    uint8_t slot = address == SETTINGS_SLOT_A ? 0u : 1u;
+    uint8_t erased = 1u;
     if (!vehicle_eeprom_read(address, record, SETTINGS_RECORD_SIZE)) {
         unrecognized_storage = 1u;
+        slot_states[slot] = 4u;
         return 0u;
     }
     for (i = 0u; i < SETTINGS_RECORD_SIZE; i++) {
-        if (record[i] != 0xFFu) unrecognized_storage = 1u;
+        if (record[i] != 0xFFu) { unrecognized_storage = 1u; erased = 0u; }
     }
-    return record[0] == 'C' && record[1] == 'C' && record[2] == 'L' && record[3] == 'I' &&
+    slot_states[slot] = erased ? 1u : 3u;
+    if (record[0] == 'C' && record[1] == 'C' && record[2] == 'L' && record[3] == 'I' &&
         record[4] == 1u && record[5] == SETTINGS_RECORD_SIZE && record[47] == 0xA5u &&
-        get16(44u) == protocol_crc(record, 44u);
+        get16(44u) == protocol_crc(record, 44u)) slot_states[slot] = 2u;
+    return slot_states[slot] == 2u;
 }
 
 static void unpack(void)
@@ -61,7 +69,9 @@ static uint8_t valid_settings_at(uint16_t address)
 {
     if (!read_record(address)) return 0u;
     unpack();
-    return li_settings_valid();
+    if (li_settings_valid()) return 1u;
+    slot_states[address == SETTINGS_SLOT_A ? 0u : 1u] = 3u;
+    return 0u;
 }
 
 uint8_t settings_load(void)
@@ -91,6 +101,7 @@ uint8_t settings_load(void)
             source = 3u;
         }
     }
+    saved_config = li_config;
     return source;
 }
 
@@ -122,13 +133,26 @@ uint8_t settings_save(void)
     put16(34u, li_config.charge_max_seconds);
     put16(44u, protocol_crc(record, 44u));
     if (!vehicle_eeprom_write_verified(address + 47u, &commit, 1u) ||
-        !vehicle_eeprom_write_verified(address, record, 47u)) return 0u;
+        !vehicle_eeprom_write_verified(address, record, 47u)) {
+        slot_states[address == SETTINGS_SLOT_A ? 0u : 1u] = 4u;
+        return 0u;
+    }
     commit = 0xA5u;
-    if (!vehicle_eeprom_write_verified(address + 47u, &commit, 1u)) return 0u;
+    if (!vehicle_eeprom_write_verified(address + 47u, &commit, 1u)) {
+        slot_states[address == SETTINGS_SLOT_A ? 0u : 1u] = 4u;
+        return 0u;
+    }
+    slot_states[address == SETTINGS_SLOT_A ? 0u : 1u] = 2u;
     sequence = next_sequence;
     source = address == SETTINGS_SLOT_A ? 1u : 2u;
+    saved_config = li_config;
     return 1u;
 }
 
 uint8_t settings_source(void) { return source; }
 uint32_t settings_sequence(void) { return sequence; }
+uint8_t settings_dirty(void)
+{
+    return (source != 1u && source != 2u) || memcmp(&li_config, &saved_config, sizeof(li_config)) != 0;
+}
+uint8_t settings_slot_state(uint8_t slot) { return slot < 2u ? slot_states[slot] : 0u; }
